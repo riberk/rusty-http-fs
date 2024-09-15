@@ -5,12 +5,16 @@ use actix_web::{
     App,
 };
 
-use crate::web::common::api_error::ApiError;
+use crate::{auth::tokens::encoder::TokensEncDec, web::common::api_error::ApiError};
 
-use super::{app_data::AppData, trace_id::TraceIdMiddlewareFactory};
+use super::{
+    app_data::AppData, auth::jwt_auth_middleware::JwtAuthenticationMiddlewareFactory,
+    trace_id::TraceIdMiddlewareFactory,
+};
 
 pub fn create_app<D: AppData + 'static>(
     app_data: Data<D>,
+    token_encoders: TokensEncDec,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -27,9 +31,17 @@ pub fn create_app<D: AppData + 'static>(
             .build()
             .into()
     });
+    let access_decoder = Data::new(token_encoders.access.decoder);
     App::new()
+        .wrap(JwtAuthenticationMiddlewareFactory::new(
+            (*access_decoder).clone(),
+        ))
         .wrap(TraceIdMiddlewareFactory::new((*app_data).clone()))
         .app_data(app_data)
         .app_data(json_cfg)
+        .app_data(Data::new(token_encoders.access.encoder))
+        .app_data(access_decoder)
+        .app_data(Data::new(token_encoders.refresh.encoder))
+        .app_data(Data::new(token_encoders.refresh.decoder))
         .configure(super::routes::configure::<D>)
 }

@@ -1,6 +1,16 @@
 use std::fmt::Debug;
 
-#[derive(PartialEq, Eq, derive_more::Deref, serde::Serialize, serde::Deserialize)]
+#[derive(
+    PartialEq,
+    Eq,
+    derive_more::Deref,
+    serde::Serialize,
+    serde::Deserialize,
+    Clone,
+    Copy,
+    PartialOrd,
+    Ord,
+)]
 pub struct Secret<T>(T);
 
 impl<T> Debug for Secret<T> {

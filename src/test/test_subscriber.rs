@@ -72,6 +72,10 @@ impl LogEntry {
             .parse()
             .unwrap()
     }
+
+    pub fn spans(&self) -> &[SpanData] {
+        &self.spans
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,6 +97,16 @@ pub struct SpanData {
 }
 
 impl SpanData {
+    pub fn new<'a, N: Into<Cow<'a, str>>, F: Into<Cow<'a, [LogField]>>>(
+        name: N,
+        fields: F,
+    ) -> Self {
+        Self {
+            name: name.into().into_owned(),
+            fields: fields.into().into_owned(),
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -153,14 +167,11 @@ impl Display for LogEntry {
             FormatFields(self.fields())
         )?;
 
-        for (idx, span) in self.spans.iter().enumerate() {
+        for span in self.spans.iter() {
             writeln!(f)?;
-            for _ in 0..((idx + 1) * 2) {
-                write!(f, " ")?;
-            }
             write!(
                 f,
-                "{}: [{}]",
+                "  {}: [{}]",
                 span.name.bold().dimmed(),
                 FormatFields(&span.fields)
             )?;
@@ -271,7 +282,7 @@ where
 
         let mut spans = Vec::new();
         if let Some(scope) = ctx.event_scope(event) {
-            for span in scope.from_root() {
+            for span in scope {
                 let extensions = span.extensions();
                 if let Some(data) = extensions.get::<FieldVisitor>() {
                     let mut fields = data.fields.clone();
@@ -358,18 +369,18 @@ impl tracing::field::Visit for FieldVisitor {
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
-    use std::time::Duration;
+    use std::{future::Future, time::Duration};
 
     use super::*;
     use crate::test::*;
     use pretty_assertions::{assert_eq, assert_ne, assert_str_eq};
-    use tracing::instrument::WithSubscriber;
+    use tracing::{dispatcher::set_default, instrument::WithSubscriber, subscriber::with_default};
     use tracing_subscriber::layer::SubscriberExt;
 
     #[test]
     fn non_async_context() {
         let logs = LogCollector::default();
-        let subscriber = tracing_subscriber::registry().with(logs.clone());
+        let subscriber = logs.make_subscriber();
         tracing::subscriber::with_default(subscriber, || {
             tracing::debug!(b = 11, b = 123, "debug log");
         });
@@ -389,7 +400,7 @@ mod tests {
     #[tokio::test]
     async fn async_context() {
         let logs = LogCollector::default();
-        let subscriber = tracing_subscriber::registry().with(logs.clone());
+        let subscriber = logs.make_subscriber();
         async move {
             tracing::info!("1");
             tokio::time::sleep(Duration::from_millis(1)).await;
@@ -408,5 +419,92 @@ mod tests {
             (Level::INFO, "2".to_owned(), Vec::default()),
         ]);
         assert_eq!(entries, expected);
+    }
+
+    #[tokio::test]
+    async fn spans_async_and_sync() {
+        use tracing::Instrument;
+
+        let logs = LogCollector::default();
+        let subscriber = Arc::new(logs.make_subscriber());
+        fn create_fut<F, Fut>(inner: F) -> impl Future<Output = ()>
+        where
+            F: FnOnce() -> Fut,
+            Fut: Future,
+        {
+            tracing::info!("outer sync");
+            let span = tracing::info_span!("inner");
+            let inner_fut = {
+                let _s = span.enter();
+                inner()
+            }
+            .instrument(span);
+
+            async move {
+                tracing::info!("outer async enter");
+                inner_fut.await;
+                tracing::info!("outer async exit");
+            }
+        }
+
+        with_default(subscriber.clone(), || tracing::info!("no span enter"));
+        with_default(subscriber.clone(), || {
+            let span = tracing::info_span!("outer");
+            {
+                let _s = span.enter();
+                create_fut(|| {
+                    tracing::info!("inner sync");
+                    async {
+                        tracing::info!("inner async enter");
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        tracing::info!("inner async exit");
+                    }
+                })
+            }
+            .instrument(span)
+            .with_subscriber(subscriber.clone())
+        })
+        .await;
+        with_default(subscriber.clone(), || tracing::info!("no span exit"));
+
+        let logs = logs
+            .take()
+            .unwrap()
+            .logs
+            .into_iter()
+            .map(|e| {
+                (
+                    e.message,
+                    e.spans.into_iter().map(|s| s.name).collect::<Vec<_>>(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let expected = Vec::from([
+            ("no span enter".to_owned(), Vec::default()),
+            ("outer sync".to_owned(), Vec::from(["outer".to_owned()])),
+            (
+                "inner sync".to_owned(),
+                Vec::from(["inner".to_owned(), "outer".to_owned()]),
+            ),
+            (
+                "outer async enter".to_owned(),
+                Vec::from(["outer".to_owned()]),
+            ),
+            (
+                "inner async enter".to_owned(),
+                Vec::from(["inner".to_owned(), "outer".to_owned()]),
+            ),
+            (
+                "inner async exit".to_owned(),
+                Vec::from(["inner".to_owned(), "outer".to_owned()]),
+            ),
+            (
+                "outer async exit".to_owned(),
+                Vec::from(["outer".to_owned()]),
+            ),
+            ("no span exit".to_owned(), Vec::default()),
+        ]);
+        assert_eq!(logs, expected);
     }
 }

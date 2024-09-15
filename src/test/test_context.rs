@@ -1,3 +1,6 @@
+use crate::auth::tokens::access_token_claims::AccessTokenClaims;
+use crate::auth::tokens::encoder::{EncDecPair, JwtTokenEncoder};
+
 use super::test_environment::TestEnvironment;
 use super::test_subscriber::LogCollector;
 use super::{pool::PoolValue, test_time::TestTime};
@@ -16,24 +19,32 @@ impl TestContext {
         &self.environment
     }
 
-    pub fn factory(&self) -> TestContextAppFactory {
-        TestContextAppFactory {
-            time: self.time.clone(),
-            value_generator: self.value_generator.clone(),
-            logs: self.logs().clone(),
-        }
+    pub fn access_token_encoder(&self) -> JwtTokenEncoder<AccessTokenClaims> {
+        EncDecPair::from_secret(self.env().config().secrets().tokens().access_secret()).encoder
+    }
+
+    pub fn refresh_token_encoder(&self) -> JwtTokenEncoder<AccessTokenClaims> {
+        EncDecPair::from_secret(self.env().config().secrets().tokens().refresh_secret()).encoder
     }
 
     pub fn logs(&self) -> &LogCollector {
         &self.logs
     }
 
-    pub fn generator(&mut self) -> &mut ValueGenerator {
-        &mut self.value_generator
+    pub fn value_generator(&self) -> &ValueGenerator {
+        &self.value_generator
     }
 
     pub fn time(&self) -> &TestTime {
         &self.time
+    }
+
+    pub fn enable_log_output(&self) {
+        _ = tracing_subscriber::fmt()
+            .json()
+            .without_time()
+            .with_max_level(tracing::Level::TRACE)
+            .try_init();
     }
 }
 
@@ -47,11 +58,4 @@ impl PoolValue<TestEnvironment> {
             logs,
         }
     }
-}
-
-#[derive(Clone)]
-pub struct TestContextAppFactory {
-    pub time: TestTime,
-    pub value_generator: ValueGenerator,
-    pub logs: LogCollector,
 }

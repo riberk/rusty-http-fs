@@ -10,6 +10,8 @@ use serde::{de::DeserializeOwned, Serialize};
 use tracing::info;
 use url::{form_urlencoded, Url};
 
+use crate::{utils::trace_id::TraceId, web::trace_id};
+
 pub trait Body {
     fn get_body(&self) -> Bytes;
 }
@@ -130,7 +132,6 @@ impl<B: Body> TestHttpRequest<B> {
         self
     }
 
-    /// Вставить заголовок с перезаписью при совпадении
     pub fn insert_header(mut self, header: impl TryIntoHeaderPair) -> Self {
         match header.try_into_pair() {
             Ok((key, value)) => {
@@ -144,7 +145,6 @@ impl<B: Body> TestHttpRequest<B> {
         self
     }
 
-    /// Вставить заголовок с перезаписью при совпадении
     pub fn access_token(self, token: &str) -> Self {
         self.insert_header((
             actix_http::header::AUTHORIZATION,
@@ -283,5 +283,15 @@ impl TestHttpResponse {
             });
             Err(err)
         }
+    }
+
+    pub fn trace_id(&self) -> TraceId {
+        self.headers
+            .get(trace_id::HEADER_NAME)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .parse()
+            .unwrap()
     }
 }

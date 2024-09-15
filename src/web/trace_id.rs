@@ -73,11 +73,12 @@ where
         let method = req.method().as_ref().to_owned();
 
         let started = std::time::Instant::now();
-        {
+        let fut = {
             let _guard = span.enter();
             tracing::info!(path = path, method = method, "request starting...");
+            self.service.call(req)
         }
-        let fut = self.service.call(req);
+        .instrument(span.clone());
         Box::pin(
             async move {
                 let mut res = fut.await?;
@@ -139,19 +140,12 @@ mod tests {
 
             // assert
             let response_trace_id = response.unwrap::<TraceId>();
-            let header_trace_id: TraceId = response
-                .headers
-                .get(trace_id::HEADER_NAME)
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .parse()
-                .unwrap();
+            let header_trace_id = response.trace_id();
 
             let log_trace_id = ctx
                 .logs()
                 .get(|e| e.message() == MESSAGE)
-                .must_have_span_field_value::<TraceId>("req1", "trace_id");
+                .must_have_span_field_value::<TraceId>("req", "trace_id");
 
             assert_eq!(response_trace_id, header_trace_id);
             assert_eq!(response_trace_id, log_trace_id);

@@ -35,6 +35,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 mime = { version = "0.3.17" }
 pretty_assertions = { version = "1.4.0" }
 colored = { version = "2.1.0" }
+jsonwebtoken = { version = "9.3.0" }
 
 
 
@@ -54,6 +55,8 @@ futures-core = { workspace = true }
 
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+jsonwebtoken = { workspace = true }
 derive_more = { workspace = true }
 dirs = { workspace = true }
 uuid = { workspace = true }

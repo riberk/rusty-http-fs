@@ -1,4 +1,4 @@
-use chrono::{serde::ts_milliseconds, DateTime, Duration, Utc};
+use chrono::{serde::ts_milliseconds, serde::ts_seconds, DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(
@@ -16,6 +16,22 @@ use serde::{Deserialize, Serialize};
     derive_more::Display,
 )]
 pub struct ApiDateTime(#[serde(with = "ts_milliseconds")] pub DateTime<Utc>);
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    derive_more::Deref,
+    derive_more::From,
+    derive_more::Display,
+)]
+pub struct ApiDateTimeSeconds(#[serde(with = "ts_seconds")] pub DateTime<Utc>);
 
 #[derive(
     Clone,

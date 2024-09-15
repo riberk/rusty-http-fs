@@ -17,6 +17,8 @@ use tracing::{
 };
 
 use crate::{
+    auth::tokens::encoder::TokensEncDec,
+    config::app_config::AppConfig,
     test::{get_free_port, ports::UsingPort},
     web::{
         app::{self},
@@ -26,9 +28,8 @@ use crate::{
 };
 
 use super::{
-    client::TestHttpResponse,
-    server::TestServer,
-    test_context::{TestContext, TestContextAppFactory},
+    client::TestHttpResponse, server::TestServer, test_context::TestContext,
+    test_subscriber::LogCollector, test_time::TestTime, value_generator::ValueGenerator,
 };
 
 pub trait RunServer {
@@ -50,15 +51,14 @@ impl RunServer for TestContext {
         configure: impl Fn(&mut ServiceConfig) + Send + 'static + Clone,
     ) -> TestServer {
         let port: UsingPort = get_free_port();
-        let factory = self.factory();
+        let factory = Factory::from_context(self);
         // let configure = configure;
-        let server = actix_web::HttpServer::new(move || {
-            factory.clone().make_app().configure(|cfg| configure(cfg))
-        })
-        .workers(4)
-        .bind(("127.0.0.1", *port))
-        .unwrap()
-        .run();
+        let server =
+            actix_web::HttpServer::new(move || factory.make_app().configure(|cfg| configure(cfg)))
+                .workers(4)
+                .bind(("127.0.0.1", *port))
+                .unwrap()
+                .run();
 
         let http_handle = server.handle();
         tokio::task::spawn(server.with_subscriber(self.logs().make_subscriber()));
@@ -114,23 +114,26 @@ where
     }
 }
 
-pub trait AppFactory {
-    fn make_app(
-        self,
-    ) -> App<
-        impl ServiceFactory<
-            ServiceRequest,
-            Config = (),
-            Response = ServiceResponse<impl actix_http::body::MessageBody>,
-            Error = actix_web::Error,
-            InitError = (),
-        >,
-    >;
+#[derive(Clone)]
+struct Factory {
+    time: TestTime,
+    value_generator: ValueGenerator,
+    logs: LogCollector,
+    config: Arc<AppConfig>,
 }
 
-impl AppFactory for TestContextAppFactory {
+impl Factory {
+    fn from_context(ctx: &TestContext) -> Self {
+        Self {
+            time: ctx.time().clone(),
+            value_generator: ctx.value_generator().clone(),
+            logs: ctx.logs().clone(),
+            config: ctx.env().config().clone(),
+        }
+    }
+
     fn make_app(
-        self,
+        &self,
     ) -> App<
         impl ServiceFactory<
             ServiceRequest,
@@ -140,11 +143,14 @@ impl AppFactory for TestContextAppFactory {
             InitError = (),
         >,
     > {
-        let app = app::create_app(Data::new(DefaultAppData::new(
+        let data = DefaultAppData::new(
             self.time.clone(),
             self.value_generator.clone(),
             self.value_generator.clone(),
-        )));
+        );
+        let tokens = TokensEncDec::from_config(self.config.secrets().tokens());
+
+        let app = app::create_app(Data::new(data), tokens);
         let subscriber = self.logs.make_subscriber();
         app.wrap(SetSubscriberMidlewareFactory(subscriber.into()))
     }
