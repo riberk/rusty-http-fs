@@ -1,76 +1,53 @@
-use std::{fmt::Display, ops::Deref};
-
 use chrono::{serde::ts_milliseconds, DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    derive_more::Deref,
+    derive_more::From,
+    derive_more::Display,
+)]
 pub struct ApiDateTime(#[serde(with = "ts_milliseconds")] pub DateTime<Utc>);
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    derive_more::Deref,
+    derive_more::From,
+    derive_more::Display,
+)]
 pub struct ApiDuration(#[serde(with = "duration_milliseconds")] pub Duration);
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    derive_more::Deref,
+    derive_more::From,
+    derive_more::Display,
+)]
 pub struct ApiDurationSeconds(#[serde(with = "duration_seconds")] pub Duration);
-
-impl Display for ApiDateTime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Display for ApiDuration {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Display for ApiDurationSeconds {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl From<DateTime<Utc>> for ApiDateTime {
-    fn from(value: DateTime<Utc>) -> Self {
-        Self(value)
-    }
-}
-
-impl From<Duration> for ApiDuration {
-    fn from(value: Duration) -> Self {
-        Self(value)
-    }
-}
-
-impl From<Duration> for ApiDurationSeconds {
-    fn from(value: Duration) -> Self {
-        Self(value)
-    }
-}
-
-impl Deref for ApiDateTime {
-    type Target = DateTime<Utc>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for ApiDuration {
-    type Target = Duration;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for ApiDurationSeconds {
-    type Target = Duration;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 pub mod duration_milliseconds {
     use chrono::Duration;

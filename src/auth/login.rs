@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
-use crate::utils::secret::Secret;
 use super::pwd::Pwd;
+use crate::utils::secret::Secret;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Login {

@@ -7,5 +7,3 @@ pub struct Source {
     id: Uuid,
     path: PathBuf,
 }
-
-

@@ -4,14 +4,24 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-sqlite = ["sqlx/sqlite"]
+test = ["awc", "bytes", "url"]
 
-postgres = ["sqlx/postgres"]
-
-[dependencies]
-config = "0.14"
+[workspace.dependencies]
+awc = { version = "3.5.1" }
+bytes = { version = "1.7.1" }
+url = { version = "2.5.2" }
+config = { version = "0.14" }
 tokio = { version = "1.0", features = ["full"] }
+
 actix-web = { version = "4.9.0" }
+actix-service = { version = "2.0.2" }
+actix-http = { version = "3.9.0" }
+actix-rt = { version = "2.10.0" }
+
+futures = { version = "0.3.30" }
+futures-util = { version = "0.3.30" }
+futures-core = { version = "0.3.30" }
+
 serde = { version = "1.0.199" }
 serde_json = { version = "1.0.128" }
 derive_more = { version = "1.0.0", features = ["full"] }
@@ -20,6 +30,48 @@ uuid = { version = "1.10.0", features = ["v7", "v4", "serde"] }
 bitflags = { version = "2.6.0" }
 sqlx = { version = "0.8.2", features = ["runtime-tokio"] }
 tracing = { version = "0.1.40" }
-tracing-subscriber = { version = "0.3.18" }
+tracing-subscriber = { version = "0.3.18", features = ["json"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 mime = { version = "0.3.17" }
+pretty_assertions = { version = "1.4.0" }
+colored = { version = "2.1.0" }
+
+
+
+[dependencies]
+
+config = { workspace = true }
+tokio = { workspace = true }
+
+actix-web = { workspace = true }
+actix-service = { workspace = true }
+actix-http = { workspace = true }
+actix-rt = { workspace = true }
+
+futures = { workspace = true }
+futures-util = { workspace = true }
+futures-core = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+derive_more = { workspace = true }
+dirs = { workspace = true }
+uuid = { workspace = true }
+bitflags = { workspace = true }
+sqlx = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+mime = { workspace = true }
+
+awc = { workspace = true, optional = true }
+bytes = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
+colored = { workspace = true, optional = true }
+
+[dev-dependencies]
+awc = { workspace = true }
+bytes = { workspace = true }
+url = { workspace = true }
+pretty_assertions = { workspace = true }
+colored = { workspace = true }

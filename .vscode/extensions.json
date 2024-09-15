@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+        "vadimcn.vscode-lldb",
+        "ExodiusStudios.comment-anchors",
+        "serayuzgur.crates",
+        "bungcip.better-toml",
+        "ms-vscode.hexeditor",
+        "rust-lang.rust-analyzer",
+        "Gruntfuggly.todo-tree",
+    ]
+}

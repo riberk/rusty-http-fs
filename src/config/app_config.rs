@@ -19,11 +19,7 @@ pub enum DatabseConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SqliteConfig {
-
-}
+pub struct SqliteConfig {}
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PostgresConfig {
-
-}
+pub struct PostgresConfig {}

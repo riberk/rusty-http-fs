@@ -1,5 +1,5 @@
-use crate::utils::secret::Secret;
 use super::pwd_alg::PwdAlg;
+use crate::utils::secret::Secret;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Pwd {

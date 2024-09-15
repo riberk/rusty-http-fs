@@ -1,3 +1,4 @@
+use actix_http::header::TryIntoHeaderValue;
 use actix_web::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -122,26 +123,6 @@ impl ApiError {
 
     pub fn unexpected() -> ApiErrorBuilder {
         Self::builder(ErrorCode::UnexpectedError)
-    }
-
-    fn make_details(details: Option<String>) -> Option<String> {
-        details.and_then(|s| if cfg!(test) { Some(s) } else { None })
-    }
-
-    fn to_details<T: Debug>(error: T) -> Option<String> {
-        if cfg!(test) {
-            Some(format!("{:?}", error))
-        } else {
-            None
-        }
-    }
-
-    fn from_details<T: Debug>(error: T) -> Self {
-        ApiError {
-            code: ErrorCode::UnexpectedError,
-            message: None,
-            details: Self::to_details(error),
-        }
     }
 }
 
